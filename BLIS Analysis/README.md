@@ -11,7 +11,7 @@ For the past several years, Calvin University statistics students have completed
     - *Percent*: score on the BLIS assessment, as a percentage
     - *Duration*: time the student took to complete the BLIS, in minutes
     - *Course*: the course that the student took or will take
-2. PDF report: Report.pdf
+2. PDF report: BLIS_Analysis.pdf
 3. HTML report: BLIS_Analysis.html
 
 For more projects, please visit my portfolio: https://Cpril.github.io/portfolio
