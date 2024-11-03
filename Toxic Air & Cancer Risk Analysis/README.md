@@ -1,0 +1,2 @@
+# Toxic Air & Cancer Risk Analysis
+Inspired by ProPublica’s Visualizing Toxic Air project, we are interested in investigating cancer case rates in relation to air pollution sources, cancer risk factors, and demographics in Louisiana, perhaps replicating some of the results from Terrell and St Julien 2022, “Air pollution is linked to higher cancer rates among black or impoverished communities in Louisiana”.
