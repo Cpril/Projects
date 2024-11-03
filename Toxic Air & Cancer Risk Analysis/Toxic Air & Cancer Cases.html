@@ -1,0 +1,757 @@
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml" lang="en" xml:lang="en"><head>
+
+<meta charset="utf-8">
+<meta name="generator" content="quarto-1.4.555">
+
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+
+<meta name="author" content="Priscilla Chen">
+
+<title>Toxic Air &amp; Cancer Cases Analysis</title>
+<style>
+code{white-space: pre-wrap;}
+span.smallcaps{font-variant: small-caps;}
+div.columns{display: flex; gap: min(4vw, 1.5em);}
+div.column{flex: auto; overflow-x: auto;}
+div.hanging-indent{margin-left: 1.5em; text-indent: -1.5em;}
+ul.task-list{list-style: none;}
+ul.task-list li input[type="checkbox"] {
+  width: 0.8em;
+  margin: 0 0.8em 0.2em -1em; /* quarto-specific, see https://github.com/quarto-dev/quarto-cli/issues/4556 */ 
+  vertical-align: middle;
+}
+/* CSS for syntax highlighting */
+pre > code.sourceCode { white-space: pre; position: relative; }
+pre > code.sourceCode > span { line-height: 1.25; }
+pre > code.sourceCode > span:empty { height: 1.2em; }
+.sourceCode { overflow: visible; }
+code.sourceCode > span { color: inherit; text-decoration: inherit; }
+div.sourceCode { margin: 1em 0; }
+pre.sourceCode { margin: 0; }
+@media screen {
+div.sourceCode { overflow: auto; }
+}
+@media print {
+pre > code.sourceCode { white-space: pre-wrap; }
+pre > code.sourceCode > span { text-indent: -5em; padding-left: 5em; }
+}
+pre.numberSource code
+  { counter-reset: source-line 0; }
+pre.numberSource code > span
+  { position: relative; left: -4em; counter-increment: source-line; }
+pre.numberSource code > span > a:first-child::before
+  { content: counter(source-line);
+    position: relative; left: -1em; text-align: right; vertical-align: baseline;
+    border: none; display: inline-block;
+    -webkit-touch-callout: none; -webkit-user-select: none;
+    -khtml-user-select: none; -moz-user-select: none;
+    -ms-user-select: none; user-select: none;
+    padding: 0 4px; width: 4em;
+  }
+pre.numberSource { margin-left: 3em;  padding-left: 4px; }
+div.sourceCode
+  {   }
+@media screen {
+pre > code.sourceCode > span > a:first-child::before { text-decoration: underline; }
+}
+</style>
+
+
+<script src="Toxic Air &amp; Cancer Cases_files/libs/clipboard/clipboard.min.js"></script>
+<script src="Toxic Air &amp; Cancer Cases_files/libs/quarto-html/quarto.js"></script>
+<script src="Toxic Air &amp; Cancer Cases_files/libs/quarto-html/popper.min.js"></script>
+<script src="Toxic Air &amp; Cancer Cases_files/libs/quarto-html/tippy.umd.min.js"></script>
+<script src="Toxic Air &amp; Cancer Cases_files/libs/quarto-html/anchor.min.js"></script>
+<link href="Toxic Air &amp; Cancer Cases_files/libs/quarto-html/tippy.css" rel="stylesheet">
+<link href="Toxic Air &amp; Cancer Cases_files/libs/quarto-html/quarto-syntax-highlighting.css" rel="stylesheet" id="quarto-text-highlighting-styles">
+<script src="Toxic Air &amp; Cancer Cases_files/libs/bootstrap/bootstrap.min.js"></script>
+<link href="Toxic Air &amp; Cancer Cases_files/libs/bootstrap/bootstrap-icons.css" rel="stylesheet">
+<link href="Toxic Air &amp; Cancer Cases_files/libs/bootstrap/bootstrap.min.css" rel="stylesheet" id="quarto-bootstrap" data-mode="light">
+
+
+</head>
+
+<body class="fullcontent">
+
+<div id="quarto-content" class="page-columns page-rows-contents page-layout-article">
+
+<main class="content" id="quarto-document-content">
+
+<header id="title-block-header" class="quarto-title-block default">
+<div class="quarto-title">
+<h1 class="title">Toxic Air &amp; Cancer Cases Analysis</h1>
+</div>
+
+
+
+<div class="quarto-title-meta">
+
+    <div>
+    <div class="quarto-title-meta-heading">Author</div>
+    <div class="quarto-title-meta-contents">
+             <p>Priscilla Chen </p>
+          </div>
+  </div>
+    
+  
+    
+  </div>
+  
+
+
+</header>
+
+
+<section id="introduction" class="level2">
+<h2 class="anchored" data-anchor-id="introduction">Introduction</h2>
+<p>Inspired by ProPublica’s Visualizing Toxic Air project, we are interested in investigating cancer case rates in relation to air pollution sources, cancer risk factors, and demographics in Louisiana, perhaps replicating some of the results from Terrell and St Julien 2022, “Air pollution is linked to higher cancer rates among black or impoverished communities in Louisiana”.</p>
+</section>
+<section id="model-planning" class="level2">
+<h2 class="anchored" data-anchor-id="model-planning">Model Planning</h2>
+<ul>
+<li><p><strong>Key Predictor</strong>: <em>relative_point_cancer_risk. The air pollution cancer risk score at point location may impact the amount of cancer cases in the area.</em></p></li>
+<li><p><strong>Key Response</strong>: <em>cancer_cases</em></p></li>
+<li><p><strong>Confounder</strong>: <em>percent_manufacturing</em> and <em>percent_construction</em> affect the point_cancer_risk for they suggest the scale of the manufacturing and construction sites at the point location, which in turn worsen air quality; and they also affect cancer cases because manufacturing and construction workers may have longer exposure to toxic air and have higher possibility to developing cancer.</p></li>
+<li><p><strong>Collider</strong>: None. There is no variable that is affected by both the predictor and response.</p></li>
+<li><p><strong>Precision Covariates</strong>: <em>percent_obese,</em> <em>percent_smokers,</em> and <em>median_age</em> may affect cancer_cases, because people with obesity, smoking habits, and higher age may have higher possibility of developing cancer. However, they are not associated with the key predictor, point_cancer_risk. <em>Relative_nonpoint_cancer_risk</em> is also a precision covariates that associated with the cancer cases, but not with the relative_point_cancer_risk.</p></li>
+<li><p><strong>Mediation Chain</strong>: <em>state, parish, census_tract</em> are all indicating locations, which is associated with the predictor, point_cancer_risk, which is then associated with cancer_cases. Relative_point_cancer_risk is a variable calculated based on <em>point_cancer_risk</em>, therefore point_cancer_risk is a mediation chain that will not be included in the model. Relative_nonpoint_cancer_risk is a variable calculated based on <em>nonpoint_cancer_risk</em>, which is already included as a precision covariate, therefore nonpoint_cancer_risk is a mediation chain of relative_nonpoint_cancer_risk and not included in the model.</p></li>
+<li><p><strong>Moderator</strong>: <em>percent_black, percent_poverty</em>.The study talked about the association between cancer risk and cancer cases has an interaction with poverty or race. It is possible that nourishment make people more succeptable for toxins in the air. It is also possible that different races have different levels of defense to toxins in the air.</p></li>
+<li><p><strong>Offset</strong>: <em>annual_population</em>. We could model calculates cancer cases per individual in the population.</p></li>
+</ul>
+<p>There are 243 rows of data, which allows for 16 parameters according to the n/15 rule. Seven predictors are included, including point_cancer_risk, <em>percent_manufacturing, percent_construction,</em> percent_smokers, percent_obese, median_age, percent_black, percent_poverty, and nonpoint_cancer_risk. The sum of these parameters is less than 16, which satisfies the n/15 rule.</p>
+</section>
+<section id="exploration" class="level2">
+<h2 class="anchored" data-anchor-id="exploration">Exploration</h2>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb1"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a>fig <span class="ot">&lt;-</span> <span class="fu">gf_point</span>(cancer_cases <span class="sc">~</span> relative_point_cancer_risk, <span class="at">data =</span> df)</span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a><span class="fu">show</span>(fig)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output-display">
+<div>
+<figure class="figure">
+<p><img src="Toxic-Air---Cancer-Cases_files/figure-html/unnamed-chunk-2-1.png" class="img-fluid figure-img" width="672"></p>
+</figure>
+</div>
+</div>
+</div>
+<p>The above plot shows the distribution of relative point cancer risk in relation to cancer cases. It seems like most data points have low and negative relative point cancer risk with a wider range of cancer cases (range from about 50 to 360). As the relative point cancer risk increases, there seems to be a slight upward trend in the cancer cases, but the data distribution seems more dispersed, making it hard to distinguish.</p>
+<p>The following graph further explores the interaction between percent proverty and relative point cancer risk in cancer cases.</p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb2"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="co"># This following line is adopted from https://stackoverflow.com/questions/40380112/categorize-continuous-variable-with-dplyr</span></span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a><span class="co"># It convert the continuous variable, relative_point_cancer_risk, into two categories, above 0 and below 0.</span></span>
+<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a>df<span class="sc">$</span>risk_category <span class="ot">&lt;-</span> <span class="fu">cut</span>(df<span class="sc">$</span>relative_point_cancer_risk, <span class="at">breaks =</span> <span class="fu">c</span>(<span class="sc">-</span><span class="cn">Inf</span>,<span class="dv">0</span>,<span class="cn">Inf</span>),</span>
+<span id="cb2-4"><a href="#cb2-4" aria-hidden="true" tabindex="-1"></a>                        <span class="at">labels=</span><span class="fu">c</span>(<span class="st">"Relative Point Cancer Risk Below 0"</span>,<span class="st">"Relative Point Cancer Risk Above 0"</span>))</span>
+<span id="cb2-5"><a href="#cb2-5" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-6"><a href="#cb2-6" aria-hidden="true" tabindex="-1"></a><span class="fu">gf_point</span>(cancer_cases <span class="sc">~</span> percent_poverty <span class="sc">|</span> risk_category, </span>
+<span id="cb2-7"><a href="#cb2-7" aria-hidden="true" tabindex="-1"></a>         <span class="at">data =</span> df)<span class="sc">|&gt;</span></span>
+<span id="cb2-8"><a href="#cb2-8" aria-hidden="true" tabindex="-1"></a>  <span class="fu">show</span>()</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output-display">
+<div>
+<figure class="figure">
+<p><img src="Toxic-Air---Cancer-Cases_files/figure-html/unnamed-chunk-3-1.png" class="img-fluid figure-img" width="672"></p>
+</figure>
+</div>
+</div>
+</div>
+<p>Above is a scatterplot showing relationship between percent_poverty and cancer cases, facet by relative point cancer risk. There seems to be a slight upward trend between percent poverty and cancer cases, especially for the group with relative point cancer risk above 0. Furthermore, there seems to be more outliers in the group with relative point cancer risk as well in which the percent poverty is relatively low, but cancer cases are very high.</p>
+</section>
+<section id="model-fitting" class="level2">
+<h2 class="anchored" data-anchor-id="model-fitting">Model Fitting</h2>
+<p>Because the response variable is count data, a negative binomial distribution model can be used.</p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb3"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a>mod1 <span class="ot">&lt;-</span> <span class="fu">glmmTMB</span>(cancer_cases <span class="sc">~</span> relative_point_cancer_risk <span class="sc">*</span> percent_black </span>
+<span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a>                <span class="sc">+</span> relative_point_cancer_risk <span class="sc">*</span> percent_poverty </span>
+<span id="cb3-3"><a href="#cb3-3" aria-hidden="true" tabindex="-1"></a>                <span class="sc">+</span> percent_construction</span>
+<span id="cb3-4"><a href="#cb3-4" aria-hidden="true" tabindex="-1"></a>                <span class="sc">+</span> median_age </span>
+<span id="cb3-5"><a href="#cb3-5" aria-hidden="true" tabindex="-1"></a>                <span class="sc">+</span> percent_manufacturing </span>
+<span id="cb3-6"><a href="#cb3-6" aria-hidden="true" tabindex="-1"></a>                <span class="sc">+</span> percent_smokers </span>
+<span id="cb3-7"><a href="#cb3-7" aria-hidden="true" tabindex="-1"></a>                <span class="sc">+</span> percent_obese </span>
+<span id="cb3-8"><a href="#cb3-8" aria-hidden="true" tabindex="-1"></a>                <span class="sc">+</span> relative_nonpoint_cancer_risk</span>
+<span id="cb3-9"><a href="#cb3-9" aria-hidden="true" tabindex="-1"></a>                <span class="sc">+</span> <span class="fu">offset</span>(<span class="fu">log</span>(annual_population)), </span>
+<span id="cb3-10"><a href="#cb3-10" aria-hidden="true" tabindex="-1"></a>                <span class="at">data =</span> df, </span>
+<span id="cb3-11"><a href="#cb3-11" aria-hidden="true" tabindex="-1"></a>                <span class="at">family =</span> <span class="fu">nbinom1</span>(<span class="at">link =</span> <span class="st">'log'</span>))</span>
+<span id="cb3-12"><a href="#cb3-12" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-13"><a href="#cb3-13" aria-hidden="true" tabindex="-1"></a>mod2 <span class="ot">&lt;-</span> <span class="fu">glmmTMB</span>(cancer_cases <span class="sc">~</span> relative_point_cancer_risk <span class="sc">*</span> percent_black </span>
+<span id="cb3-14"><a href="#cb3-14" aria-hidden="true" tabindex="-1"></a>                <span class="sc">+</span> relative_point_cancer_risk <span class="sc">*</span> percent_poverty </span>
+<span id="cb3-15"><a href="#cb3-15" aria-hidden="true" tabindex="-1"></a>                <span class="sc">+</span> percent_construction</span>
+<span id="cb3-16"><a href="#cb3-16" aria-hidden="true" tabindex="-1"></a>                <span class="sc">+</span> median_age </span>
+<span id="cb3-17"><a href="#cb3-17" aria-hidden="true" tabindex="-1"></a>                <span class="sc">+</span> percent_manufacturing </span>
+<span id="cb3-18"><a href="#cb3-18" aria-hidden="true" tabindex="-1"></a>                <span class="sc">+</span> percent_smokers </span>
+<span id="cb3-19"><a href="#cb3-19" aria-hidden="true" tabindex="-1"></a>                <span class="sc">+</span> percent_obese </span>
+<span id="cb3-20"><a href="#cb3-20" aria-hidden="true" tabindex="-1"></a>                <span class="sc">+</span> relative_nonpoint_cancer_risk</span>
+<span id="cb3-21"><a href="#cb3-21" aria-hidden="true" tabindex="-1"></a>                <span class="sc">+</span> <span class="fu">offset</span>(<span class="fu">log</span>(annual_population)), </span>
+<span id="cb3-22"><a href="#cb3-22" aria-hidden="true" tabindex="-1"></a>                <span class="at">data =</span> df, </span>
+<span id="cb3-23"><a href="#cb3-23" aria-hidden="true" tabindex="-1"></a>                <span class="at">family =</span> <span class="fu">nbinom2</span>(<span class="at">link =</span> <span class="st">'log'</span>))</span>
+<span id="cb3-24"><a href="#cb3-24" aria-hidden="true" tabindex="-1"></a><span class="fu">AIC</span>(mod1,mod2)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>     df      AIC
+mod1 13 2394.908
+mod2 13 2398.920</code></pre>
+</div>
+</div>
+<p>AIC of mod1 is smaller than that of mod2, so mod1 is a better model of our purpose.</p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb5"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a><span class="fu">summary</span>(mod1)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code> Family: nbinom1  ( log )
+Formula:          
+cancer_cases ~ relative_point_cancer_risk * percent_black + relative_point_cancer_risk *  
+    percent_poverty + percent_construction + median_age + percent_manufacturing +  
+    percent_smokers + percent_obese + relative_nonpoint_cancer_risk +  
+    offset(log(annual_population))
+Data: df
+
+     AIC      BIC   logLik deviance df.resid 
+  2394.9   2440.3  -1184.5   2368.9      229 
+
+
+Dispersion parameter for nbinom1 family (): 4.32 
+
+Conditional model:
+                                            Estimate Std. Error z value
+(Intercept)                                -3.878983   0.184849 -20.985
+relative_point_cancer_risk                  0.059344   0.039301   1.510
+percent_black                              -0.139942   0.054427  -2.571
+percent_poverty                             0.920166   0.299251   3.075
+percent_construction                       -0.214090   0.514303  -0.416
+median_age                                  0.018843   0.001801  10.463
+percent_manufacturing                       0.191187   0.483573   0.395
+percent_smokers                             0.005980   0.004218   1.418
+percent_obese                               0.002892   0.004637   0.624
+relative_nonpoint_cancer_risk              -0.019180   0.026626  -0.720
+relative_point_cancer_risk:percent_black    0.001230   0.081818   0.015
+relative_point_cancer_risk:percent_poverty -0.355711   0.506556  -0.702
+                                           Pr(&gt;|z|)    
+(Intercept)                                 &lt; 2e-16 ***
+relative_point_cancer_risk                  0.13105    
+percent_black                               0.01013 *  
+percent_poverty                             0.00211 ** 
+percent_construction                        0.67721    
+median_age                                  &lt; 2e-16 ***
+percent_manufacturing                       0.69258    
+percent_smokers                             0.15623    
+percent_obese                               0.53283    
+relative_nonpoint_cancer_risk               0.47132    
+relative_point_cancer_risk:percent_black    0.98801    
+relative_point_cancer_risk:percent_poverty  0.48255    
+---
+Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1</code></pre>
+</div>
+</div>
+</section>
+<section id="model-assessment" class="level2">
+<h2 class="anchored" data-anchor-id="model-assessment">Model Assessment</h2>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb7"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb7-1"><a href="#cb7-1" aria-hidden="true" tabindex="-1"></a>sim1 <span class="ot">&lt;-</span> <span class="fu">simulateResiduals</span>(mod1)</span>
+<span id="cb7-2"><a href="#cb7-2" aria-hidden="true" tabindex="-1"></a><span class="fu">plotResiduals</span>(sim1, <span class="at">quantreg =</span> <span class="cn">FALSE</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output-display">
+<div>
+<figure class="figure">
+<p><img src="Toxic-Air---Cancer-Cases_files/figure-html/unnamed-chunk-6-1.png" class="img-fluid figure-img" width="672"></p>
+</figure>
+</div>
+</div>
+</div>
+<p>DHARMa residual assessment checks mean-variance relationship and non-linearity, which can be demonstrated by a vertically uniformed distribution. This residual vs predicted graph passes these two assessment because it shows a relative vertically uniformed distribution, except from a little less dense area on the bottom-left and top-right areas.</p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb8"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb8-1"><a href="#cb8-1" aria-hidden="true" tabindex="-1"></a>s245<span class="sc">::</span><span class="fu">gf_acf</span>(<span class="sc">~</span><span class="fu">resid</span>(mod1))<span class="sc">|&gt;</span> <span class="fu">gf_lims</span> (<span class="at">y =</span> <span class="fu">c</span>(<span class="sc">-</span><span class="dv">1</span>,<span class="dv">1</span>))</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output-display">
+<div>
+<figure class="figure">
+<p><img src="Toxic-Air---Cancer-Cases_files/figure-html/unnamed-chunk-7-1.png" class="img-fluid figure-img" width="672"></p>
+</figure>
+</div>
+</div>
+</div>
+<p>ACF graph checks the independence of residuals. This ACF graph passes the assessment because the residual ACF relatively fit within the confidence bounds, except for Lag(1) which is slightly over the confidence bound but this difference is negligible. Lag(0) can be ignored because it is always 1.</p>
+</section>
+<section id="conclusions" class="level2">
+<h2 class="anchored" data-anchor-id="conclusions">Conclusions</h2>
+<section id="model-selection" class="level4">
+<h4 class="anchored" data-anchor-id="model-selection">Model selection:</h4>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb9"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb9-1"><a href="#cb9-1" aria-hidden="true" tabindex="-1"></a>car<span class="sc">::</span><span class="fu">Anova</span>(mod1)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>Analysis of Deviance Table (Type II Wald chisquare tests)
+
+Response: cancer_cases
+                                              Chisq Df Pr(&gt;Chisq)    
+relative_point_cancer_risk                   3.3740  1  0.0662325 .  
+percent_black                                6.7759  1  0.0092398 ** 
+percent_poverty                             12.9484  1  0.0003202 ***
+percent_construction                         0.1733  1  0.6772102    
+median_age                                 109.4787  1  &lt; 2.2e-16 ***
+percent_manufacturing                        0.1563  1  0.6925752    
+percent_smokers                              2.0103  1  0.1562340    
+percent_obese                                0.3890  1  0.5328269    
+relative_nonpoint_cancer_risk                0.5189  1  0.4713190    
+relative_point_cancer_risk:percent_black     0.0002  1  0.9880092    
+relative_point_cancer_risk:percent_poverty   0.4931  1  0.4825452    
+---
+Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1</code></pre>
+</div>
+</div>
+</section>
+<section id="prediction-plot" class="level4">
+<h4 class="anchored" data-anchor-id="prediction-plot">Prediction plot:</h4>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb11"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb11-1"><a href="#cb11-1" aria-hidden="true" tabindex="-1"></a>predictions <span class="ot">&lt;-</span> <span class="fu">ggpredict</span>(mod1,</span>
+<span id="cb11-2"><a href="#cb11-2" aria-hidden="true" tabindex="-1"></a>                          <span class="at">terms =</span> <span class="st">"relative_point_cancer_risk"</span>,</span>
+<span id="cb11-3"><a href="#cb11-3" aria-hidden="true" tabindex="-1"></a>                          <span class="at">condition =</span> <span class="fu">list</span>(<span class="at">percent_poverty =</span> <span class="fl">0.03</span>,</span>
+<span id="cb11-4"><a href="#cb11-4" aria-hidden="true" tabindex="-1"></a>                                          <span class="at">percent_black =</span> <span class="fl">0.03</span>,</span>
+<span id="cb11-5"><a href="#cb11-5" aria-hidden="true" tabindex="-1"></a>                                           <span class="at">median_age =</span> <span class="dv">40</span>, </span>
+<span id="cb11-6"><a href="#cb11-6" aria-hidden="true" tabindex="-1"></a>                                           <span class="at">percent_smokers =</span> <span class="dv">25</span>, </span>
+<span id="cb11-7"><a href="#cb11-7" aria-hidden="true" tabindex="-1"></a>                                           <span class="at">percent_obese =</span> <span class="dv">30</span>, </span>
+<span id="cb11-8"><a href="#cb11-8" aria-hidden="true" tabindex="-1"></a>                                           <span class="at">percent_construction =</span> <span class="fl">0.05</span>, </span>
+<span id="cb11-9"><a href="#cb11-9" aria-hidden="true" tabindex="-1"></a>                                           <span class="at">percent_manufacturing =</span> <span class="fl">0.05</span>, </span>
+<span id="cb11-10"><a href="#cb11-10" aria-hidden="true" tabindex="-1"></a>                                           <span class="at">relative_nonpoint_cancer_risk =</span> <span class="fl">0.05</span>, </span>
+<span id="cb11-11"><a href="#cb11-11" aria-hidden="true" tabindex="-1"></a>                                           <span class="at">annual_population =</span> <span class="dv">1</span>))</span>
+<span id="cb11-12"><a href="#cb11-12" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb11-13"><a href="#cb11-13" aria-hidden="true" tabindex="-1"></a><span class="fu">print</span>(predictions)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code># Predicted counts of cancer_cases
+
+relative_point_cancer_risk | Predicted |     95% CI
+---------------------------------------------------
+                     -1.00 |      0.05 | 0.05, 0.06
+                     -0.50 |      0.06 | 0.05, 0.06
+                      0.00 |      0.06 | 0.05, 0.06
+                      0.50 |      0.06 | 0.05, 0.06
+                      1.00 |      0.06 | 0.05, 0.07
+                      1.50 |      0.06 | 0.05, 0.07
+                      2.00 |      0.06 | 0.05, 0.07
+                      2.50 |      0.06 | 0.05, 0.08</code></pre>
+</div>
+</div>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb13"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb13-1"><a href="#cb13-1" aria-hidden="true" tabindex="-1"></a><span class="fu">plot</span>(predictions)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output-display">
+<div>
+<figure class="figure">
+<p><img src="Toxic-Air---Cancer-Cases_files/figure-html/unnamed-chunk-10-1.png" class="img-fluid figure-img" width="672"></p>
+</figure>
+</div>
+</div>
+</div>
+<p>In conclusion, this model passes all model assessment of non-linearity, mean-variance and independence of residuals, based on model assessments. Based on the model selection and prediction plot, there is week evidence (p-value = 0.062) that relative_point_cancer_risk is associated with cancer_cases (95% CI at 0.05, 0.06) when other predictors are kept constant at: percent_poverty = 0.03, percent_black = 0.03, median_age = 40, percent_smokers = 25, percent_obese = 30, percent_construction = 0.05, percent_manufacturing = 0.05, relative_nonpoint_cancer_risk = 0.05, and annual_population = 1.</p>
+</section>
+</section>
+
+</main>
+<!-- /main column -->
+<script id="quarto-html-after-body" type="application/javascript">
+window.document.addEventListener("DOMContentLoaded", function (event) {
+  const toggleBodyColorMode = (bsSheetEl) => {
+    const mode = bsSheetEl.getAttribute("data-mode");
+    const bodyEl = window.document.querySelector("body");
+    if (mode === "dark") {
+      bodyEl.classList.add("quarto-dark");
+      bodyEl.classList.remove("quarto-light");
+    } else {
+      bodyEl.classList.add("quarto-light");
+      bodyEl.classList.remove("quarto-dark");
+    }
+  }
+  const toggleBodyColorPrimary = () => {
+    const bsSheetEl = window.document.querySelector("link#quarto-bootstrap");
+    if (bsSheetEl) {
+      toggleBodyColorMode(bsSheetEl);
+    }
+  }
+  toggleBodyColorPrimary();  
+  const icon = "";
+  const anchorJS = new window.AnchorJS();
+  anchorJS.options = {
+    placement: 'right',
+    icon: icon
+  };
+  anchorJS.add('.anchored');
+  const isCodeAnnotation = (el) => {
+    for (const clz of el.classList) {
+      if (clz.startsWith('code-annotation-')) {                     
+        return true;
+      }
+    }
+    return false;
+  }
+  const clipboard = new window.ClipboardJS('.code-copy-button', {
+    text: function(trigger) {
+      const codeEl = trigger.previousElementSibling.cloneNode(true);
+      for (const childEl of codeEl.children) {
+        if (isCodeAnnotation(childEl)) {
+          childEl.remove();
+        }
+      }
+      return codeEl.innerText;
+    }
+  });
+  clipboard.on('success', function(e) {
+    // button target
+    const button = e.trigger;
+    // don't keep focus
+    button.blur();
+    // flash "checked"
+    button.classList.add('code-copy-button-checked');
+    var currentTitle = button.getAttribute("title");
+    button.setAttribute("title", "Copied!");
+    let tooltip;
+    if (window.bootstrap) {
+      button.setAttribute("data-bs-toggle", "tooltip");
+      button.setAttribute("data-bs-placement", "left");
+      button.setAttribute("data-bs-title", "Copied!");
+      tooltip = new bootstrap.Tooltip(button, 
+        { trigger: "manual", 
+          customClass: "code-copy-button-tooltip",
+          offset: [0, -8]});
+      tooltip.show();    
+    }
+    setTimeout(function() {
+      if (tooltip) {
+        tooltip.hide();
+        button.removeAttribute("data-bs-title");
+        button.removeAttribute("data-bs-toggle");
+        button.removeAttribute("data-bs-placement");
+      }
+      button.setAttribute("title", currentTitle);
+      button.classList.remove('code-copy-button-checked');
+    }, 1000);
+    // clear code selection
+    e.clearSelection();
+  });
+    var localhostRegex = new RegExp(/^(?:http|https):\/\/localhost\:?[0-9]*\//);
+    var mailtoRegex = new RegExp(/^mailto:/);
+      var filterRegex = new RegExp('/' + window.location.host + '/');
+    var isInternal = (href) => {
+        return filterRegex.test(href) || localhostRegex.test(href) || mailtoRegex.test(href);
+    }
+    // Inspect non-navigation links and adorn them if external
+ 	var links = window.document.querySelectorAll('a[href]:not(.nav-link):not(.navbar-brand):not(.toc-action):not(.sidebar-link):not(.sidebar-item-toggle):not(.pagination-link):not(.no-external):not([aria-hidden]):not(.dropdown-item):not(.quarto-navigation-tool)');
+    for (var i=0; i<links.length; i++) {
+      const link = links[i];
+      if (!isInternal(link.href)) {
+        // undo the damage that might have been done by quarto-nav.js in the case of
+        // links that we want to consider external
+        if (link.dataset.originalHref !== undefined) {
+          link.href = link.dataset.originalHref;
+        }
+      }
+    }
+  function tippyHover(el, contentFn, onTriggerFn, onUntriggerFn) {
+    const config = {
+      allowHTML: true,
+      maxWidth: 500,
+      delay: 100,
+      arrow: false,
+      appendTo: function(el) {
+          return el.parentElement;
+      },
+      interactive: true,
+      interactiveBorder: 10,
+      theme: 'quarto',
+      placement: 'bottom-start',
+    };
+    if (contentFn) {
+      config.content = contentFn;
+    }
+    if (onTriggerFn) {
+      config.onTrigger = onTriggerFn;
+    }
+    if (onUntriggerFn) {
+      config.onUntrigger = onUntriggerFn;
+    }
+    window.tippy(el, config); 
+  }
+  const noterefs = window.document.querySelectorAll('a[role="doc-noteref"]');
+  for (var i=0; i<noterefs.length; i++) {
+    const ref = noterefs[i];
+    tippyHover(ref, function() {
+      // use id or data attribute instead here
+      let href = ref.getAttribute('data-footnote-href') || ref.getAttribute('href');
+      try { href = new URL(href).hash; } catch {}
+      const id = href.replace(/^#\/?/, "");
+      const note = window.document.getElementById(id);
+      if (note) {
+        return note.innerHTML;
+      } else {
+        return "";
+      }
+    });
+  }
+  const xrefs = window.document.querySelectorAll('a.quarto-xref');
+  const processXRef = (id, note) => {
+    // Strip column container classes
+    const stripColumnClz = (el) => {
+      el.classList.remove("page-full", "page-columns");
+      if (el.children) {
+        for (const child of el.children) {
+          stripColumnClz(child);
+        }
+      }
+    }
+    stripColumnClz(note)
+    if (id === null || id.startsWith('sec-')) {
+      // Special case sections, only their first couple elements
+      const container = document.createElement("div");
+      if (note.children && note.children.length > 2) {
+        container.appendChild(note.children[0].cloneNode(true));
+        for (let i = 1; i < note.children.length; i++) {
+          const child = note.children[i];
+          if (child.tagName === "P" && child.innerText === "") {
+            continue;
+          } else {
+            container.appendChild(child.cloneNode(true));
+            break;
+          }
+        }
+        if (window.Quarto?.typesetMath) {
+          window.Quarto.typesetMath(container);
+        }
+        return container.innerHTML
+      } else {
+        if (window.Quarto?.typesetMath) {
+          window.Quarto.typesetMath(note);
+        }
+        return note.innerHTML;
+      }
+    } else {
+      // Remove any anchor links if they are present
+      const anchorLink = note.querySelector('a.anchorjs-link');
+      if (anchorLink) {
+        anchorLink.remove();
+      }
+      if (window.Quarto?.typesetMath) {
+        window.Quarto.typesetMath(note);
+      }
+      // TODO in 1.5, we should make sure this works without a callout special case
+      if (note.classList.contains("callout")) {
+        return note.outerHTML;
+      } else {
+        return note.innerHTML;
+      }
+    }
+  }
+  for (var i=0; i<xrefs.length; i++) {
+    const xref = xrefs[i];
+    tippyHover(xref, undefined, function(instance) {
+      instance.disable();
+      let url = xref.getAttribute('href');
+      let hash = undefined; 
+      if (url.startsWith('#')) {
+        hash = url;
+      } else {
+        try { hash = new URL(url).hash; } catch {}
+      }
+      if (hash) {
+        const id = hash.replace(/^#\/?/, "");
+        const note = window.document.getElementById(id);
+        if (note !== null) {
+          try {
+            const html = processXRef(id, note.cloneNode(true));
+            instance.setContent(html);
+          } finally {
+            instance.enable();
+            instance.show();
+          }
+        } else {
+          // See if we can fetch this
+          fetch(url.split('#')[0])
+          .then(res => res.text())
+          .then(html => {
+            const parser = new DOMParser();
+            const htmlDoc = parser.parseFromString(html, "text/html");
+            const note = htmlDoc.getElementById(id);
+            if (note !== null) {
+              const html = processXRef(id, note);
+              instance.setContent(html);
+            } 
+          }).finally(() => {
+            instance.enable();
+            instance.show();
+          });
+        }
+      } else {
+        // See if we can fetch a full url (with no hash to target)
+        // This is a special case and we should probably do some content thinning / targeting
+        fetch(url)
+        .then(res => res.text())
+        .then(html => {
+          const parser = new DOMParser();
+          const htmlDoc = parser.parseFromString(html, "text/html");
+          const note = htmlDoc.querySelector('main.content');
+          if (note !== null) {
+            // This should only happen for chapter cross references
+            // (since there is no id in the URL)
+            // remove the first header
+            if (note.children.length > 0 && note.children[0].tagName === "HEADER") {
+              note.children[0].remove();
+            }
+            const html = processXRef(null, note);
+            instance.setContent(html);
+          } 
+        }).finally(() => {
+          instance.enable();
+          instance.show();
+        });
+      }
+    }, function(instance) {
+    });
+  }
+      let selectedAnnoteEl;
+      const selectorForAnnotation = ( cell, annotation) => {
+        let cellAttr = 'data-code-cell="' + cell + '"';
+        let lineAttr = 'data-code-annotation="' +  annotation + '"';
+        const selector = 'span[' + cellAttr + '][' + lineAttr + ']';
+        return selector;
+      }
+      const selectCodeLines = (annoteEl) => {
+        const doc = window.document;
+        const targetCell = annoteEl.getAttribute("data-target-cell");
+        const targetAnnotation = annoteEl.getAttribute("data-target-annotation");
+        const annoteSpan = window.document.querySelector(selectorForAnnotation(targetCell, targetAnnotation));
+        const lines = annoteSpan.getAttribute("data-code-lines").split(",");
+        const lineIds = lines.map((line) => {
+          return targetCell + "-" + line;
+        })
+        let top = null;
+        let height = null;
+        let parent = null;
+        if (lineIds.length > 0) {
+            //compute the position of the single el (top and bottom and make a div)
+            const el = window.document.getElementById(lineIds[0]);
+            top = el.offsetTop;
+            height = el.offsetHeight;
+            parent = el.parentElement.parentElement;
+          if (lineIds.length > 1) {
+            const lastEl = window.document.getElementById(lineIds[lineIds.length - 1]);
+            const bottom = lastEl.offsetTop + lastEl.offsetHeight;
+            height = bottom - top;
+          }
+          if (top !== null && height !== null && parent !== null) {
+            // cook up a div (if necessary) and position it 
+            let div = window.document.getElementById("code-annotation-line-highlight");
+            if (div === null) {
+              div = window.document.createElement("div");
+              div.setAttribute("id", "code-annotation-line-highlight");
+              div.style.position = 'absolute';
+              parent.appendChild(div);
+            }
+            div.style.top = top - 2 + "px";
+            div.style.height = height + 4 + "px";
+            div.style.left = 0;
+            let gutterDiv = window.document.getElementById("code-annotation-line-highlight-gutter");
+            if (gutterDiv === null) {
+              gutterDiv = window.document.createElement("div");
+              gutterDiv.setAttribute("id", "code-annotation-line-highlight-gutter");
+              gutterDiv.style.position = 'absolute';
+              const codeCell = window.document.getElementById(targetCell);
+              const gutter = codeCell.querySelector('.code-annotation-gutter');
+              gutter.appendChild(gutterDiv);
+            }
+            gutterDiv.style.top = top - 2 + "px";
+            gutterDiv.style.height = height + 4 + "px";
+          }
+          selectedAnnoteEl = annoteEl;
+        }
+      };
+      const unselectCodeLines = () => {
+        const elementsIds = ["code-annotation-line-highlight", "code-annotation-line-highlight-gutter"];
+        elementsIds.forEach((elId) => {
+          const div = window.document.getElementById(elId);
+          if (div) {
+            div.remove();
+          }
+        });
+        selectedAnnoteEl = undefined;
+      };
+        // Handle positioning of the toggle
+    window.addEventListener(
+      "resize",
+      throttle(() => {
+        elRect = undefined;
+        if (selectedAnnoteEl) {
+          selectCodeLines(selectedAnnoteEl);
+        }
+      }, 10)
+    );
+    function throttle(fn, ms) {
+    let throttle = false;
+    let timer;
+      return (...args) => {
+        if(!throttle) { // first call gets through
+            fn.apply(this, args);
+            throttle = true;
+        } else { // all the others get throttled
+            if(timer) clearTimeout(timer); // cancel #2
+            timer = setTimeout(() => {
+              fn.apply(this, args);
+              timer = throttle = false;
+            }, ms);
+        }
+      };
+    }
+      // Attach click handler to the DT
+      const annoteDls = window.document.querySelectorAll('dt[data-target-cell]');
+      for (const annoteDlNode of annoteDls) {
+        annoteDlNode.addEventListener('click', (event) => {
+          const clickedEl = event.target;
+          if (clickedEl !== selectedAnnoteEl) {
+            unselectCodeLines();
+            const activeEl = window.document.querySelector('dt[data-target-cell].code-annotation-active');
+            if (activeEl) {
+              activeEl.classList.remove('code-annotation-active');
+            }
+            selectCodeLines(clickedEl);
+            clickedEl.classList.add('code-annotation-active');
+          } else {
+            // Unselect the line
+            unselectCodeLines();
+            clickedEl.classList.remove('code-annotation-active');
+          }
+        });
+      }
+  const findCites = (el) => {
+    const parentEl = el.parentElement;
+    if (parentEl) {
+      const cites = parentEl.dataset.cites;
+      if (cites) {
+        return {
+          el,
+          cites: cites.split(' ')
+        };
+      } else {
+        return findCites(el.parentElement)
+      }
+    } else {
+      return undefined;
+    }
+  };
+  var bibliorefs = window.document.querySelectorAll('a[role="doc-biblioref"]');
+  for (var i=0; i<bibliorefs.length; i++) {
+    const ref = bibliorefs[i];
+    const citeInfo = findCites(ref);
+    if (citeInfo) {
+      tippyHover(citeInfo.el, function() {
+        var popup = window.document.createElement('div');
+        citeInfo.cites.forEach(function(cite) {
+          var citeDiv = window.document.createElement('div');
+          citeDiv.classList.add('hanging-indent');
+          citeDiv.classList.add('csl-entry');
+          var biblioDiv = window.document.getElementById('ref-' + cite);
+          if (biblioDiv) {
+            citeDiv.innerHTML = biblioDiv.innerHTML;
+          }
+          popup.appendChild(citeDiv);
+        });
+        return popup.innerHTML;
+      });
+    }
+  }
+});
+</script>
+</div> <!-- /content -->
+
+
+
+
+</body></html>
